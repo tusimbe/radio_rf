@@ -1,0 +1,6 @@
+---- xQueueGenericReset Matches (5 in 3 files) ----
+Mpu_wrappers.h (d:\radio_rf\freertos\inc):		#define xQueueGenericReset				MPU_xQueueGenericReset
+Queue.c (d:\radio_rf\freertos\src):BaseType_t xQueueGenericReset( QueueHandle_t xQueue, BaseType_t xNewQueue )
+Queue.c (d:\radio_rf\freertos\src):				( void ) xQueueGenericReset( pxNewQueue, pdTRUE );
+Queue.h (d:\radio_rf\freertos\inc):#define xQueueReset( xQueue ) xQueueGenericReset( xQueue, pdFALSE )
+Queue.h (d:\radio_rf\freertos\inc):BaseType_t xQueueGenericReset( QueueHandle_t xQueue, BaseType_t xNewQueue ) PRIVILEGED_FUNCTION;
