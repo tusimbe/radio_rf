@@ -63,7 +63,9 @@ RADIO_TYPE = PTX
 MY_CFLAGS =
 
 ifeq ($(RADIO_TYPE), PRX)
-	MY_CFLAGS += -DRADIO_CONF_PRX
+	MY_CFLAGS += -DRADIO_CONF_PRX -DGZLL_HOST_ONLY -DGZP_CRYPT_DISABLE
+else
+	MY_CFLAGS += -DGZLL_DEVICE_ONLY -DGZP_CRYPT_DISABLE
 endif
  
 # The linker options.
@@ -82,17 +84,19 @@ SRCDIRS   = ./freertos/src \
             ./drivers/CMSIS/src \
             ./drivers/STM32F1xx_HAL_Driver/src \
             ./app/src/filesys \
-	    ./app/src/ppm \
-	    ./app/src/radio \
-	    ./app/src/system \
+			./app/src/ppm \
+			./app/src/radio \
+			./app/src/system \
             ./target/miniv3 \
             ./drivers/nrf24l01/src \
+            ./gazell/src \
+            ./drivers/flash/src 
 
 
-ifeq ($(RADIO_TYPE), PRX))
-	SRCDIRS += ./app/src/receiver
+ifeq ($(RADIO_TYPE), PRX)
+	SRCDIRS += ./app/src/receiver ./gazell/host
 else
-	SRCDIRS += ./app/src/transmitter
+	SRCDIRS += ./app/src/transmitter ./gazell/device
 endif
 
 # The include directiories
@@ -101,7 +105,9 @@ INCDIRS  = -I./freertos/inc \
            -I./drivers/CMSIS/inc \
            -I./drivers/STM32F1xx_HAL_Driver/Inc \
            -I./app/inc \
-           -I./drivers/nrf24l01/inc
+           -I./drivers/nrf24l01/inc \
+           -I./gazell/inc \
+           -I./drivers/flash/inc
 
 # The ld scripts
 LDSCRIPT = ./script/STM32F103XE_FLASH.ld

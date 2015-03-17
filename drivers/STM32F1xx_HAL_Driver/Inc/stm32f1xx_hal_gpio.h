@@ -264,6 +264,20 @@ typedef enum
   */
 #define __HAL_GPIO_EXTI_GENERATE_SWIT(__EXTI_LINE__) (EXTI->SWIER |= (__EXTI_LINE__))
 
+#define __HAL_GPIO_EXTI_ENABLE_IT(pin)               SET_BIT(EXTI->IMR, pin)
+#define __HAL_GPIO_EXTI_DISABLE_IT(pin)              CLEAR_BIT(EXTI->IMR, pin)
+
+#define __HAL_GPIO_EXTI_SAVE(f, p) do { f = READ_BIT(EXTI->IMR, p); \
+                                        CLEAR_BIT(EXTI->IMR, p); } while(0)
+
+#define __HAL_GPIO_EXTI_RESTORE(f, p) do { if(!f) \
+                                               SET_BIT(EXTI->IMR, p); \
+                                           else \
+                                               CLEAR_BIT(EXTI->IMR, p);}while(0)
+
+#define __HAL_GPIO_EXTI_READ(pin)                    READ_BIT(EXTI->IMR, pin)
+
+
 /* Include GPIO HAL Extension module */
 #include "stm32f1xx_hal_gpio_ex.h"
 

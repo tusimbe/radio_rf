@@ -51,12 +51,12 @@
 SPI_HandleTypeDef hspi1;
 
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim8;
 
 UART_HandleTypeDef huart1;
 
 osThreadId defaultTaskHandle;
-osThreadId radioTaskHandle;
 
 uint8_t retUSER;    /* Return value for USER */
 char USER_Path[4];  /* USER logical drive path */
@@ -64,7 +64,6 @@ uint16_t last_edge;
 uint16_t width;
 uint16_t ppm_pulse_seqence[20];
 uint16_t *p_ppm_pulse_seqence;
-
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -76,10 +75,12 @@ void SystemClock_Config(void);
 static void MX_SPI1_Init(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_TIM3_Init(void);
 static void MX_TIM8_Init(void);
 static void MX_USART1_UART_Init(void);
 void StartDefaultTask(void const * argument);
 void HAL_TIM_IC_OverFlowCallback(TIM_HandleTypeDef *htim);
+void HAL_TIM_UpCallback(TIM_HandleTypeDef *htim);
 
 /* USER CODE BEGIN PFP */
 
@@ -107,12 +108,10 @@ int main(void)
     /* Initialize all configured peripherals */
     MX_GPIO_Init();
     MX_SPI1_Init();
-    MX_TIM2_Init();
+    //MX_TIM2_Init();
+    MX_TIM3_Init();
     MX_USART1_UART_Init();
-
-#ifdef RADIO_CONF_PRX
     MX_TIM8_Init();
-#endif
 
     /* USER CODE BEGIN 2 */
 
@@ -129,11 +128,9 @@ int main(void)
     /* USER CODE BEGIN RTOS_TIMERS */
     /* start timers, add new ones, ... */
     /* USER CODE END RTOS_TIMERS */
-#ifdef RADIO_CONF_PRX
-    (void)radio_init(HAL_NRF_PRX);
-#else
-    (void)radio_init(HAL_NRF_PTX);
-#endif
+    
+    (void)radio_host_init();
+
     printf("system init ok, create tasks ...\r\n");
 
     /* Create the thread(s) */
@@ -141,8 +138,6 @@ int main(void)
     osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
     defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
-    osThreadDef(radioTask, StartRadioTask, osPriorityNormal, 0, 1024);
-    radioTaskHandle = osThreadCreate(osThread(radioTask), NULL);
 
     /* USER CODE BEGIN RTOS_THREADS */
     /* add threads, ... */
@@ -233,7 +228,7 @@ void MX_GPIO_Init(void)
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
 
     /* NRF_IRQ */
-    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
     GPIO_InitStruct.Pin = GPIO_PIN_1;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
@@ -255,7 +250,13 @@ void MX_GPIO_Init(void)
 
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_4, GPIO_PIN_SET);
     HAL_GPIO_WritePin(GPIOA, 
-        GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3 | GPIO_PIN_4, GPIO_PIN_SET);
+        GPIO_PIN_1 | GPIO_PIN_2 | GPIO_PIN_3, GPIO_PIN_SET);
+
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET);
+
+    HAL_NVIC_SetPriority(EXTI1_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1, 0);
+    HAL_NVIC_EnableIRQ(EXTI1_IRQn);
+    
     return;
 }
 
@@ -317,14 +318,36 @@ void MX_TIM2_Init(void)
     return;
 }
 
-/* TIM8 init function */
-void MX_TIM8_Init(void)
+/* TIM3 init function */
+void MX_TIM3_Init(void)
 {
 
     TIM_ClockConfigTypeDef sClockSourceConfig;
     TIM_MasterConfigTypeDef sMasterConfig;
-    TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig;
-    TIM_OC_InitTypeDef sConfigOC;
+
+    htim3.Instance = TIM3;
+    htim3.Init.Prescaler = 72 - 1;  /* 1MHz */
+    htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+    htim3.Init.Period = 0xffff;
+    htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+    HAL_TIM_Base_Init(&htim3);
+
+    sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+    HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig);
+
+    sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+    sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+    HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig);
+
+    HAL_NVIC_SetPriority(TIM3_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1, 1);
+    HAL_NVIC_EnableIRQ(TIM3_IRQn);
+
+    HAL_TIM_Base_Start_IT(&htim3);
+}
+
+/* TIM8 init function */
+void MX_TIM8_Init(void)
+{
     PPM_ENCODER ppm;
     uint16_t ppm_last_low_width;
     uint16_t i;
@@ -351,34 +374,7 @@ void MX_TIM8_Init(void)
     htim8.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
     htim8.Init.RepetitionCounter = 0;
     HAL_TIM_Base_Init(&htim8);
-#if 0
-    sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-    HAL_TIM_ConfigClockSource(&htim8, &sClockSourceConfig);
 
-    HAL_TIM_OC_Init(&htim8);
-
-    sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-    sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-    HAL_TIMEx_MasterConfigSynchronization(&htim8, &sMasterConfig);
-
-    sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
-    sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
-    sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
-    sBreakDeadTimeConfig.DeadTime = 0;
-    sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
-    sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
-    sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
-    HAL_TIMEx_ConfigBreakDeadTime(&htim8, &sBreakDeadTimeConfig);
-
-    sConfigOC.OCMode = TIM_OCMODE_PWM1;
-    sConfigOC.Pulse = PPM_STOP_PULSE_WIDTH;
-    sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-    sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
-    sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-    sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
-    sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-    HAL_TIM_PWM_ConfigChannel(&htim8, &sConfigOC, TIM_CHANNEL_1);
-#endif
     htim8.Instance->CCR2 = 1000;
     htim8.Instance->CR1 &= ~TIM_CR1_CEN;
     
@@ -397,8 +393,6 @@ void MX_TIM8_Init(void)
     htim8.Instance->CR1 = TIM_CR1_CEN;
 
     HAL_NVIC_SetPriority(TIM8_UP_IRQn, configLIBRARY_LOWEST_INTERRUPT_PRIORITY - 1, 0);
-    HAL_NVIC_SetPriority(TIM8_CC_IRQn, configLIBRARY_LOWEST_INTERRUPT_PRIORITY - 1, 0);
-    HAL_NVIC_EnableIRQ(TIM8_CC_IRQn);
     HAL_NVIC_EnableIRQ(TIM8_UP_IRQn);
 }
 
@@ -406,6 +400,14 @@ void MX_TIM8_Init(void)
 
 /* USER CODE END 4 */
 
+extern uint32_t dbg_exit1_int_cnt;
+extern uint32_t dbg_tim3_int_cnt;
+extern uint32_t dbg_int_max_rt;
+extern uint32_t dbg_int_rx_dr;
+extern uint32_t dbg_int_tx_ds;
+extern uint8_t  dbg_irq_flag;
+extern uint16_t dbg_rx_period;
+extern uint8_t gzll_chm_get_current_rx_channel();
 void StartDefaultTask(void const * argument)
 {
     argument = argument;
@@ -415,28 +417,17 @@ void StartDefaultTask(void const * argument)
     /* USER CODE BEGIN 5 */
     osDelay(1);
 
-#ifdef RADIO_CONF_PRX
-#if 0
-    HAL_NVIC_EnableIRQ(TIM8_UP_IRQn);
-    HAL_NVIC_EnableIRQ(TIM8_CC_IRQn);
-    HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_1);
-    __HAL_TIM_ENABLE_IT(&htim8, TIM_IT_CC2);
-    __HAL_TIM_ENABLE_IT(&htim8, TIM_IT_UPDATE);
-#endif
-#else
-    /* enable TIM2 capture interrupt */
-    HAL_NVIC_EnableIRQ(TIM2_IRQn);
-    HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
-#endif
-
     /* Infinite loop */
     for(;;)
     {
         osDelay(1000);
         HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_8);
-#ifndef RADIO_CONF_PRX
-        ppm_show_channels();
-#endif
+
+        printf("eint %d, tim3:%d, max:%d, tx:%d, rx:%d, tf:0x%x, rf:%d\r\n", 
+        dbg_exit1_int_cnt, dbg_tim3_int_cnt, dbg_int_max_rt, dbg_int_tx_ds,
+        dbg_int_rx_dr, dbg_irq_flag, gzll_chm_get_current_rx_channel());
+
+        printf("rx poried:%d, int_status:%d\r\n", dbg_rx_period, __HAL_GPIO_EXTI_READ(GPIO_PIN_1));
     }
 
     /* USER CODE END 5 */ 
@@ -458,34 +449,6 @@ void HAL_TIM_IC_OverFlowCallback(TIM_HandleTypeDef *htim)
     if (htim->Instance == TIM2)
     {
         ppm_decode(htim->Instance->CCR1, PPM_DECODER_OVERFLOW_ERROR);
-    }
-}
-
-void HAL_TIM_CcCallback(TIM_HandleTypeDef *htim)
-{
-    PPM_ENCODER ppm;
-    uint16_t dummy;
-    
-    if (htim->Instance == TIM8 && htim->Channel == HAL_TIM_ACTIVE_CHANNEL_2)
-    {
-        printf("T8 CC\r\n");
-        __HAL_TIM_CLEAR_IT(htim, TIM_SR_CC2IF);
-        #if 0
-        __HAL_TIM_DISABLE_IT(htim, TIM_IT_CC2);
-        radio_get_pload((uint8_t*)ppm.channels);
-        ppm.stop_pulse_width = PPM_STOP_PULSE_WIDTH;
-        ppm.valid_chan_num = 8;
-        ppm_encoder(&ppm, ppm_pulse_seqence, &dummy);
-        htim->Instance->CCR1 = PPM_STOP_PULSE_WIDTH;
-        htim->Instance->CCR2 = dummy;
-        htim->Instance->CCER |= TIM_CCER_CC1P;
-        p_ppm_pulse_seqence = &ppm_pulse_seqence[0];
-
-        __HAL_TIM_ENABLE_IT(htim, TIM_DIER_UDE);
-        __HAL_TIM_CLEAR_IT(htim, TIM_SR_UIF);
-        /* Enable the TIM Update interrupt */
-        __HAL_TIM_ENABLE_IT(htim, TIM_IT_UPDATE);
-        #endif
     }
 }
 

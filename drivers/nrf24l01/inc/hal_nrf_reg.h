@@ -1,19 +1,23 @@
-/* Copyright (c) 2006 Nordic Semiconductor. All Rights Reserved.
+/* Copyright (c) 2009 Nordic Semiconductor. All Rights Reserved.
  *
- * The information contained herein is confidential property of Nordic Semiconductor. The use,
- * copying, transfer or disclosure of such information is prohibited except by express written
- * agreement with Nordic Semiconductor.
+ * The information contained herein is confidential property of Nordic
+ * Semiconductor ASA.Terms and conditions of usage are described in detail
+ * in NORDIC SEMICONDUCTOR STANDARD SOFTWARE LICENSE AGREEMENT.
  *
- * $Rev: 1731 $
+ * Licensees are granted free, non-transferable use of the information. NO
+ * WARRENTY of ANY KIND is provided. This heading must NOT be removed from
+ * the file.
  *
+ * $LastChangedRevision: 2519 $
  */
 
 /** @file
- * Register definitions for the nRF HAL module
- * @defgroup nordic_hal_nrf_reg nRF24L01 Register definitions
- * @{
- * @ingroup nordic_hal_nrf
- * Header file defining register mapping with bit definitions.\ This file is radio-chip dependent, and are included with the hal_nrf.h
+@brief Register definitions for nRF24L01+
+
+@details Header file defining register mapping with bit definitions.
+This file is radio-chip dependent, and are included with the hal_nrf.h
+
+@ingroup hal_nrf24l01p_hal_nrf
  */
 
 #ifndef HAL_NRF_REG_H__
@@ -22,49 +26,48 @@
 /** @name - Instruction Set - */
 //@{
 /* nRF24L01 Instruction Definitions */
-#define NRF_WRITE_REG   0x20  /**< Register write command */
-#define RD_RX_PLOAD_W   0x60  /**< Read RX payload command */
-#define RD_RX_PLOAD   0x61  /**< Read RX payload command */
-#define WR_TX_PLOAD   0xA0  /**< Write TX payload command */
-#define WR_ACK_PLOAD  0xA8  /**< Write ACK payload command */
-#define WR_NAC_TX_PLOAD 0xB0  /**< Write ACK payload command */
-#define FLUSH_TX      0xE1  /**< Flush TX register command */
-#define FLUSH_RX      0xE2  /**< Flush RX register command */
-#define REUSE_TX_PL   0xE3  /**< Reuse TX payload command */
-#define LOCK_UNLOCK   0x50  /**< Lock/unlcok exclusive features */
-
-#define NOP           0xFF  /**< No Operation command, used for reading status register */
+#define W_REGISTER         0x20U  /**< Register write command */
+#define R_RX_PAYLOAD       0x61U  /**< Read RX payload command */
+#define W_TX_PAYLOAD       0xA0U  /**< Write TX payload command */
+#define FLUSH_TX           0xE1U  /**< Flush TX register command */
+#define FLUSH_RX           0xE2U  /**< Flush RX register command */
+#define REUSE_TX_PL        0xE3U  /**< Reuse TX payload command */
+#define ACTIVATE           0x50U  /**< Activate features */
+#define R_RX_PL_WID        0x60U  /**< Read RX payload command */
+#define W_ACK_PAYLOAD      0xA8U  /**< Write ACK payload command */
+#define W_TX_PAYLOAD_NOACK 0xB0U  /**< Write ACK payload command */
+#define NOP                0xFFU  /**< No Operation command, used for reading status register */
 //@}
 
 /** @name  - Register Memory Map - */
 //@{
 /* nRF24L01 * Register Definitions * */
-#define CONFIG        0x00  /**< nRF24L01 config register */
-#define EN_AA         0x01  /**< nRF24L01 enable Auto-Acknowledge register */
-#define EN_RXADDR     0x02  /**< nRF24L01 enable RX addresses register */
-#define SETUP_AW      0x03  /**< nRF24L01 setup of address width register */
-#define SETUP_RETR    0x04  /**< nRF24L01 setup of automatic retransmission register */
-#define RF_CH         0x05  /**< nRF24L01 RF channel register */
-#define RF_SETUP      0x06  /**< nRF24L01 RF setup register */
-#define STATUS        0x07  /**< nRF24L01 status register */
-#define OBSERVE_TX    0x08  /**< nRF24L01 transmit observe register */
-#define CD            0x09  /**< nRF24L01 carrier detect register */
-#define RX_ADDR_P0    0x0A  /**< nRF24L01 receive address data pipe0 */
-#define RX_ADDR_P1    0x0B  /**< nRF24L01 receive address data pipe1 */
-#define RX_ADDR_P2    0x0C  /**< nRF24L01 receive address data pipe2 */
-#define RX_ADDR_P3    0x0D  /**< nRF24L01 receive address data pipe3 */
-#define RX_ADDR_P4    0x0E  /**< nRF24L01 receive address data pipe4 */
-#define RX_ADDR_P5    0x0F  /**< nRF24L01 receive address data pipe5 */
-#define TX_ADDR       0x10  /**< nRF24L01 transmit address */
-#define RX_PW_P0      0x11  /**< nRF24L01 \# of bytes in rx payload for pipe0 */
-#define RX_PW_P1      0x12  /**< nRF24L01 \# of bytes in rx payload for pipe1 */
-#define RX_PW_P2      0x13  /**< nRF24L01 \# of bytes in rx payload for pipe2 */
-#define RX_PW_P3      0x14  /**< nRF24L01 \# of bytes in rx payload for pipe3 */
-#define RX_PW_P4      0x15  /**< nRF24L01 \# of bytes in rx payload for pipe4 */
-#define RX_PW_P5      0x16  /**< nRF24L01 \# of bytes in rx payload for pipe5 */
-#define FIFO_STATUS   0x17  /**< nRF24L01 FIFO status register */
-#define DYNPD         0x1C  /**< nRF24L01 Dynamic payload setup */
-#define FEATURE       0x1D  /**< nRF24L01 Exclusive feature setup */
+#define CONFIG        0x00U  /**< nRF24L01 config register */
+#define EN_AA         0x01U  /**< nRF24L01 enable Auto-Acknowledge register */
+#define EN_RXADDR     0x02U  /**< nRF24L01 enable RX addresses register */
+#define SETUP_AW      0x03U  /**< nRF24L01 setup of address width register */
+#define SETUP_RETR    0x04U  /**< nRF24L01 setup of automatic retransmission register */
+#define RF_CH         0x05U  /**< nRF24L01 RF channel register */
+#define RF_SETUP      0x06U  /**< nRF24L01 RF setup register */
+#define STATUS        0x07U  /**< nRF24L01 status register */
+#define OBSERVE_TX    0x08U  /**< nRF24L01 transmit observe register */
+#define CD            0x09U  /**< nRF24L01 carrier detect register */
+#define RX_ADDR_P0    0x0AU  /**< nRF24L01 receive address data pipe0 */
+#define RX_ADDR_P1    0x0BU  /**< nRF24L01 receive address data pipe1 */
+#define RX_ADDR_P2    0x0CU  /**< nRF24L01 receive address data pipe2 */
+#define RX_ADDR_P3    0x0DU  /**< nRF24L01 receive address data pipe3 */
+#define RX_ADDR_P4    0x0EU  /**< nRF24L01 receive address data pipe4 */
+#define RX_ADDR_P5    0x0FU  /**< nRF24L01 receive address data pipe5 */
+#define TX_ADDR       0x10U  /**< nRF24L01 transmit address */
+#define RX_PW_P0      0x11U  /**< nRF24L01 \# of bytes in rx payload for pipe0 */
+#define RX_PW_P1      0x12U  /**< nRF24L01 \# of bytes in rx payload for pipe1 */
+#define RX_PW_P2      0x13U  /**< nRF24L01 \# of bytes in rx payload for pipe2 */
+#define RX_PW_P3      0x14U  /**< nRF24L01 \# of bytes in rx payload for pipe3 */
+#define RX_PW_P4      0x15U  /**< nRF24L01 \# of bytes in rx payload for pipe4 */
+#define RX_PW_P5      0x16U  /**< nRF24L01 \# of bytes in rx payload for pipe5 */
+#define FIFO_STATUS   0x17U  /**< nRF24L01 FIFO status register */
+#define DYNPD         0x1CU  /**< nRF24L01 Dynamic payload setup */
+#define FEATURE       0x1DU  /**< nRF24L01 Exclusive feature setup */
 
 //@}
 
@@ -113,32 +116,17 @@ typedef enum {
  */
 typedef enum {
     HAL_NRF_1MBPS,          /**< Datarate set to 1 Mbps  */
-    HAL_NRF_2MBPS           /**< Datarate set to 2 Mbps  */
+    HAL_NRF_2MBPS,          /**< Datarate set to 2 Mbps  */
+    HAL_NRF_250KBPS         /**< Datarate set to 250 kbps*/
 } hal_nrf_datarate_t;
-
-/** An enum describing the radio's PLL mode.
- *
- */
-typedef enum {
-    HAL_NRF_PLL_UNLOCK,     /**< PLL unlocked, normal operation  */
-    HAL_NRF_PLL_LOCK        /**< PLL locked, test mode  */
-} hal_nrf_pll_mode_t;
-
-/** An enum describing the radio's LNA mode.
- *
- */
-typedef enum {
-    HAL_NRF_LNA_LCURR,      /**< LNA set to low current mode */
-    HAL_NRF_LNA_HCURR       /**< LNA set to high current mode */
-} hal_nrf_lna_mode_t;
 
 /** An enum describing the radio's CRC mode.
  *
  */
 typedef enum {
-    HAL_NRF_CRC_OFF,        /**< CRC check disabled */
-    HAL_NRF_CRC_8BIT = 2,   /**< CRC check set to 8-bit */
-    HAL_NRF_CRC_16BIT       /**< CRC check set to 16-bit */
+    HAL_NRF_CRC_OFF,    /**< CRC check disabled */
+    HAL_NRF_CRC_8BIT,   /**< CRC check set to 8-bit */
+    HAL_NRF_CRC_16BIT   /**< CRC check set to 16-bit */
 } hal_nrf_crc_mode_t;
 
 /** An enum describing the read/write payload command.
@@ -154,7 +142,7 @@ typedef enum {
  *
  */
 typedef enum {
-    HAL_NRF_PIPE0,              /**< Select pipe0 */
+    HAL_NRF_PIPE0 = 0,          /**< Select pipe0 */
     HAL_NRF_PIPE1,              /**< Select pipe1 */
     HAL_NRF_PIPE2,              /**< Select pipe2 */
     HAL_NRF_PIPE3,              /**< Select pipe3 */

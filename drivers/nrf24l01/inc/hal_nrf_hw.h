@@ -58,6 +58,21 @@
 
 #define IRQ()  HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1)
 
+/** Macro for writing the radio SPI data register.
+ *
+ */
+#define HAL_NRF_HW_SPI_WRITE(d) do { hspi1.Instance->DR = d; } while(0)
+
+/** Macro for reading the radio SPI data register.
+ *
+ */
+#define HAL_NRF_HW_SPI_READ() hspi1.Instance->DR
+
+/** Macro specifyng the radio SPI busy flag.
+ *
+ */
+#define HAL_NRF_HW_SPI_BUSY (__HAL_SPI_GET_FLAG(&hspi1, SPI_FLAG_TXE) == RESET)
+
 /**
  * Pulses the CE to nRF24L01 for at least 10 us
  */

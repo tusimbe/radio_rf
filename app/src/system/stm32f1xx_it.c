@@ -43,8 +43,9 @@
  
 extern void xPortSysTickHandler(void);
 void TIM2_IRQHandler(void);
+void TIM3_IRQHandler(void);
 void TIM8_UP_IRQHandler(void);
-void TIM8_CC_IRQHandler(void);
+void EXTI1_IRQHandler(void);
 
 extern void HAL_TIM_UpCallback(TIM_HandleTypeDef *htim);
 extern void HAL_TIM_CcCallback(TIM_HandleTypeDef *htim);
@@ -70,6 +71,7 @@ void SysTick_Handler(void)
 }
 
 extern TIM_HandleTypeDef htim2;
+extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim8;
 /* USER CODE BEGIN 1 */
 void TIM2_IRQHandler(void)
@@ -77,15 +79,19 @@ void TIM2_IRQHandler(void)
     HAL_TIM_IRQHandler(&htim2);
 }
 
+void TIM3_IRQHandler(void)
+{
+    HAL_TIM_IRQHandler(&htim3);
+}
+
 void TIM8_UP_IRQHandler(void)
 {
     HAL_TIM_UpCallback(&htim8);
 }
 
-void TIM8_CC_IRQHandler(void)
+void EXTI1_IRQHandler(void)
 {
-    HAL_TIM_CcCallback(&htim8);
+    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_1);
 }
-
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
