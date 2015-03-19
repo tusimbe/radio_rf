@@ -41,6 +41,7 @@
 #include "ppm_decoder.h"
 #include "ppm_encoder.h"
 #include "radio.h"
+#include "telemetry.h"
 #include <stdio.h>
 #include <string.h>
 /* USER CODE BEGIN Includes */
@@ -74,7 +75,6 @@ void _init (void);
 void SystemClock_Config(void);
 static void MX_SPI1_Init(void);
 static void MX_GPIO_Init(void);
-static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM8_Init(void);
 static void MX_USART1_UART_Init(void);
@@ -128,6 +128,10 @@ int main(void)
     /* USER CODE BEGIN RTOS_TIMERS */
     /* start timers, add new ones, ... */
     /* USER CODE END RTOS_TIMERS */
+
+    __enable_irq();
+
+    (void)telemetry_init();
     
     (void)radio_host_init();
 
@@ -281,43 +285,6 @@ void MX_SPI1_Init(void)
     __HAL_SPI_ENABLE(&hspi1);
 }
 
-
-void MX_TIM2_Init(void)
-{
-    TIM_ClockConfigTypeDef sClockSourceConfig;
-    TIM_MasterConfigTypeDef sMasterConfig;
-    TIM_IC_InitTypeDef sConfigIC;
-
-    htim2.Instance = TIM2;
-    htim2.Init.Prescaler = 72 - 1; /* 1MHZ */
-    htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-    htim2.Init.Period = 0xffff;
-    htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-    HAL_TIM_Base_Init(&htim2);
-
-    sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-    HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig);
-
-    HAL_TIM_IC_Init(&htim2);
-
-    sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-    sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-    HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig);
-
-    sConfigIC.ICPolarity = TIM_INPUTCHANNELPOLARITY_FALLING;
-    sConfigIC.ICSelection = TIM_ICSELECTION_DIRECTTI;
-    sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
-    sConfigIC.ICFilter = 0;
-    HAL_TIM_IC_ConfigChannel(&htim2, &sConfigIC, TIM_CHANNEL_1);
-
-    HAL_NVIC_SetPriority(TIM2_IRQn, configLIBRARY_LOWEST_INTERRUPT_PRIORITY, 0);
-    
-    HAL_NVIC_DisableIRQ(TIM2_IRQn);
-    HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_1);
-
-    return;
-}
-
 /* TIM3 init function */
 void MX_TIM3_Init(void)
 {
@@ -407,7 +374,8 @@ extern uint32_t dbg_int_rx_dr;
 extern uint32_t dbg_int_tx_ds;
 extern uint8_t  dbg_irq_flag;
 extern uint16_t dbg_rx_period;
-extern uint8_t gzll_chm_get_current_rx_channel();
+extern uint8_t gzll_chm_get_current_rx_channel(void);
+
 void StartDefaultTask(void const * argument)
 {
     argument = argument;
@@ -423,11 +391,13 @@ void StartDefaultTask(void const * argument)
         osDelay(1000);
         HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_8);
 
+        /*
         printf("eint %d, tim3:%d, max:%d, tx:%d, rx:%d, tf:0x%x, rf:%d\r\n", 
         dbg_exit1_int_cnt, dbg_tim3_int_cnt, dbg_int_max_rt, dbg_int_tx_ds,
         dbg_int_rx_dr, dbg_irq_flag, gzll_chm_get_current_rx_channel());
 
         printf("rx poried:%d, int_status:%d\r\n", dbg_rx_period, __HAL_GPIO_EXTI_READ(GPIO_PIN_1));
+        */
     }
 
     /* USER CODE END 5 */ 

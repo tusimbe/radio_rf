@@ -128,6 +128,7 @@ int main(void)
     /* USER CODE BEGIN RTOS_TIMERS */
     /* start timers, add new ones, ... */
     /* USER CODE END RTOS_TIMERS */
+    __enable_irq();
 
     (void)radio_device_init();
 
@@ -406,7 +407,7 @@ extern uint32_t dbg_tx_retrans;
 extern bool volatile gzll_sync_on;
 extern uint8_t gzp_system_address[4];
 extern bool pairing_ok;
-extern uint8_t gzll_chm_get_current_rx_channel();
+extern uint8_t gzll_chm_get_current_rx_channel(void);
 void StartDefaultTask(void const * argument)
 {
     argument = argument;
@@ -426,15 +427,16 @@ void StartDefaultTask(void const * argument)
         osDelay(1000);
         HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_8);
         //ppm_show_channels();
-
-        printf("eint %d, tim3:%d, max:%d, tx:%d, rx:%d, tf:0x%x, rf:%d\r\n", 
+#if 1
+        printf("eint %d, tim3:%d, max:%d, tx:%d, rx:%d, tf:0x%x, rf:%d, primask:%d\r\n", 
         dbg_exit1_int_cnt, dbg_tim3_int_cnt, dbg_int_max_rt, dbg_int_tx_ds,
-        dbg_int_rx_dr, dbg_irq_flag, gzll_sync_on);
+        dbg_int_rx_dr, dbg_irq_flag, gzll_sync_on, __get_PRIMASK());
 
         //printf("rx poried:%d, isr_max_tick:%d, min_tick:%d, tx_retry:%d\r\n", 
         //dbg_rx_period, dbg_isr_max_tick, dbg_isr_min_tick, dbg_tx_retrans);
         printf("pairing_status:%d, sys_addr:0x%x%x%x%x\r\n", pairing_ok, gzp_system_address[0], 
         gzp_system_address[1], gzp_system_address[2], gzp_system_address[3]);
+#endif
     }
 
     /* USER CODE END 5 */ 

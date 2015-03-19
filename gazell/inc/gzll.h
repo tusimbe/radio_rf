@@ -644,25 +644,8 @@ used.
 */
 void gzll_set_timer_period(uint16_t period);
 
-inline uint32_t gzll_interupts_save(void)
-{
-  uint32_t flag;
-  flag = __get_PRIMASK();
-  __disable_irq();
-  return flag;
-}
-
-inline void gzll_interupts_restore(uint32_t flag)
-{
-    if(flag)
-    {
-        __enable_irq();
-    }
-    else
-    {
-        __disable_irq();
-    }
-}
+uint32_t gzll_interupts_save(void);
+void gzll_interupts_restore(uint32_t flag);
 
 /** @} @} @} @} */
 

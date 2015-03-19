@@ -90,11 +90,11 @@ SRCDIRS   = ./freertos/src \
             ./target/miniv3 \
             ./drivers/nrf24l01/src \
             ./gazell/src \
-            ./drivers/flash/src 
+            ./drivers/flash/src \
 
 
 ifeq ($(RADIO_TYPE), PRX)
-	SRCDIRS += ./app/src/receiver ./gazell/host
+	SRCDIRS += ./app/src/receiver ./gazell/host ./app/src/telemetry
 else
 	SRCDIRS += ./app/src/transmitter ./gazell/device
 endif
@@ -107,7 +107,8 @@ INCDIRS  = -I./freertos/inc \
            -I./app/inc \
            -I./drivers/nrf24l01/inc \
            -I./gazell/inc \
-           -I./drivers/flash/inc
+           -I./drivers/flash/inc \
+           -I./mavlink 
 
 # The ld scripts
 LDSCRIPT = ./script/STM32F103XE_FLASH.ld

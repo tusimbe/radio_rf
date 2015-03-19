@@ -278,6 +278,26 @@ static uint16_t gzll_try_counter;               // Transmit attempts for previou
 
 #define GZLL_RFCE_LOW() CE_LOW()
 
+uint32_t gzll_interupts_save(void)
+{
+  uint32_t flag;
+  flag = __get_PRIMASK();
+  __disable_irq();
+  return flag;
+}
+
+void gzll_interupts_restore(uint32_t flag)
+{
+    if(!flag)
+    {
+        __enable_irq();
+    }
+    else
+    {
+        __disable_irq();
+    }
+}
+
 /*-----------------------------------------------------------------------------
   Implementation: Application interface (user functions)
 -----------------------------------------------------------------------------*/

@@ -8,6 +8,7 @@
 #include "ppm_decoder.h"
 #include <gzll.h>
 #include <gzp.h>
+#include "telemetry.h"
 
 extern uint16_t ppm_buffer[PPM_MAX_CHANNELS];
 
@@ -67,8 +68,7 @@ int32_t radio_device_init(void)
 bool pairing_ok = false;
 void radio_device_task(void const *argument)
 {
-    bool tx_success = false;
-
+    argument = argument;
     
     gzll_init();
     gzp_init();
@@ -99,6 +99,7 @@ void radio_device_task(void const *argument)
         #if 1
         if (!pairing_ok)
         {
+            osDelay(100);
             pairing_ok = gzp_address_req_send();            
         }
         else
@@ -111,8 +112,12 @@ void radio_device_task(void const *argument)
                     
                     if (gzll_rx_fifo_read(ack_pload, NULL, NULL))
                     {
-                        printf("Get ack pload 0x%x%x%x%x%x\r\n", ack_pload[0], ack_pload[1],
-                            ack_pload[2], ack_pload[3], ack_pload[4]);
+                        printf("[sys status] volt:%fv current:%dma remaining:%d\r\n", 
+                            (*(uint16_t*)&ack_pload[0] / 1000.0f), (*(int16_t*)&ack_pload[2]),
+                            (*(uint16_t*)&ack_pload[4])); 
+                        printf("[attitude] roll:%f pitch: %f yaw:%f\r\n",
+                            ToDeg(*(float*)&ack_pload[6]), ToDeg(*(float*)&ack_pload[10]), 
+                            ToDeg(*(float*)&ack_pload[14]));
                     }
                 }
                 else
@@ -144,6 +149,9 @@ int32_t radio_host_init(void)
 
 void radio_host_task(void const * argument)
 {
+    uint8_t *ptr;
+    uint8_t len;
+    uint32_t tmp = 0x12345678;
     argument = argument;
 
     gzll_init();
@@ -177,15 +185,18 @@ void radio_host_task(void const * argument)
         {
             if (gzll_rx_fifo_read(pload, NULL, NULL))
             {
-                printf("pload:%d\r\n", *(uint16_t*)pload);
+                //printf("pload:%d\r\n", *(uint16_t*)pload);
+                memset(ack_pload, 0, RF_PAYLOAD_LENGTH);
+               
+                ptr = ack_pload;
+                len = telemetry_push_volt_cur(ack_pload);
+                ptr += len;
                 
-                ack_pload[0] = 0x55;
-                ack_pload[1] = 0x5a;
-                ack_pload[2] = 0x55;
-                ack_pload[3] = 0x5a;
-                ack_pload[4] = 0x55;
-
-                gzll_ack_payload_write(ack_pload, 5, 2);
+                len = telemetry_push_attitude(ptr);
+  
+                //printf("roll %f, pitch %f, yaw %f\r\n", ToDeg(*(float*)&ack_pload[6]), 
+                    //ToDeg(*(float*)&ack_pload[10]), ToDeg(*(float*)&ack_pload[14]));
+                gzll_ack_payload_write(ack_pload, GZLL_MAX_ACK_PAYLOAD_LENGTH, 2);
             }
         }
     }

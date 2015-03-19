@@ -411,7 +411,8 @@ bool gzp_crypt_data_send(const uint8_t *src, uint8_t length)
 //-----------------------------------------------------------------------------
 // Implementation: Internal (static) functions
 //-----------------------------------------------------------------------------
-
+extern uint32_t dbg_tim3_int_cnt;
+extern uint32_t dbg_exit1_int_cnt;
 static bool gzp_tx_packet(const uint8_t* tx_packet, uint8_t length, uint8_t pipe)
 {
   if(gzll_tx_data(tx_packet, length, pipe))
