@@ -84,19 +84,23 @@ SRCDIRS   = ./freertos/src \
             ./drivers/CMSIS/src \
             ./drivers/STM32F1xx_HAL_Driver/src \
             ./app/src/filesys \
-			./app/src/ppm \
-			./app/src/radio \
-			./app/src/system \
+            ./app/src/ppm \
+	        ./app/src/pcm \
+	        ./app/src/key \
+            ./app/src/radio \
+            ./app/src/system \
+            ./app/src/pairing_list \
             ./target/miniv3 \
             ./drivers/nrf24l01/src \
             ./gazell/src \
             ./drivers/flash/src \
+            ./drivers/i2c 
 
 
 ifeq ($(RADIO_TYPE), PRX)
 	SRCDIRS += ./app/src/receiver ./gazell/host ./app/src/telemetry
 else
-	SRCDIRS += ./app/src/transmitter ./gazell/device
+	SRCDIRS += ./app/src/transmitter ./gazell/device ./drivers/lcd/src
 endif
 
 # The include directiories
@@ -108,7 +112,9 @@ INCDIRS  = -I./freertos/inc \
            -I./drivers/nrf24l01/inc \
            -I./gazell/inc \
            -I./drivers/flash/inc \
-           -I./mavlink 
+           -I./mavlink \
+           -I./drivers/lcd/inc \
+           -I./drivers/i2c
 
 # The ld scripts
 LDSCRIPT = ./script/STM32F103XE_FLASH.ld

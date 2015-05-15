@@ -6,6 +6,8 @@
 #include <common/mavlink.h>
 #include "telemetry.h"
 
+extern uint32_t timer_1ms;
+
 mavlink_system_t mavlink_system = {20, 3, 0, 0 ,0 ,0};
 mavlink_system_t target_system;
 
@@ -14,8 +16,11 @@ TELEMETRY_DATA telemetry;
 osSemaphoreId telemetry_sema;
 osThreadId telemetryTaskHandle;
 static uint32_t packet_drops;
-static bool mavlink_active = false;
+bool mavlink_active = false;
 static bool request_send = false;
+bool waitting_for_heartbeat = true;
+uint32_t last_heart_beat_time;
+uint32_t heartbeat_cnt;
 
 uint8_t buf[MAVLINK_MAX_PACKET_LEN];
 TELEMETRY_STREAM streams[] = 
@@ -91,9 +96,15 @@ void telemetry_mavlink_proc(uint8_t c)
         switch (msg.msgid)
         {
             case MAVLINK_MSG_ID_HEARTBEAT:
+                heartbeat_cnt++;
                 mavlink_active = true;
                 target_system.sysid = msg.sysid;
                 target_system.compid = msg.compid;
+                last_heart_beat_time = timer_1ms;
+                if (waitting_for_heartbeat)
+                {
+                    request_send = true;
+                }
                 (void)osSemaphoreReleaseFromISR(telemetry_sema);
                 break;
             case MAVLINK_MSG_ID_RAW_IMU:
@@ -225,13 +236,15 @@ void telemetry_process_task(void const *argument)
         /* waitting for data update notify */
         (void)osSemaphoreWait(telemetry_sema, osWaitForever);
 
-        if (mavlink_active && !request_send)
+        if (request_send)
         {
             for (i = 0; i < 3; i++)
             {
                 telemetry_data_request_read();
-                request_send = true;
             }
+
+            request_send = false;
+            waitting_for_heartbeat = false;
         }
 
 

@@ -41,6 +41,9 @@
 #include "ppm_decoder.h"
 #include "ppm_encoder.h"
 #include "radio.h"
+#include "hal_lcd.h"
+#include "pcm_decoder.h"
+#include "key.h"
 #include <stdio.h>
 #include <string.h>
 /* USER CODE BEGIN Includes */
@@ -77,7 +80,6 @@ static void MX_SPI1_Init(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM3_Init(void);
-static void MX_TIM8_Init(void);
 static void MX_USART1_UART_Init(void);
 void StartDefaultTask(void const * argument);
 void HAL_TIM_IC_OverFlowCallback(TIM_HandleTypeDef *htim);
@@ -92,8 +94,7 @@ void HAL_TIM_UpCallback(TIM_HandleTypeDef *htim);
 /* USER CODE END 0 */
 
 int main(void)
-{
-
+{    
     /* USER CODE BEGIN 1 */
 
     /* USER CODE END 1 */
@@ -109,7 +110,7 @@ int main(void)
     /* Initialize all configured peripherals */
     MX_GPIO_Init();
     MX_SPI1_Init();
-    MX_TIM2_Init();
+    pcm_decoder_init();
     MX_TIM3_Init();
     MX_USART1_UART_Init();
 
@@ -128,15 +129,16 @@ int main(void)
     /* USER CODE BEGIN RTOS_TIMERS */
     /* start timers, add new ones, ... */
     /* USER CODE END RTOS_TIMERS */
+    
+    key_init();
     __enable_irq();
-
     (void)radio_device_init();
 
     printf("system init ok, create tasks ...\r\n");
-
+    
     /* Create the thread(s) */
     /* definition and creation of defaultTask */
-    osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
+    osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 512);
     defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
     /* USER CODE BEGIN RTOS_THREADS */
@@ -217,6 +219,7 @@ void MX_GPIO_Init(void)
     __GPIOA_CLK_ENABLE();
     __GPIOC_CLK_ENABLE();
     __GPIOD_CLK_ENABLE();
+    __GPIOB_CLK_ENABLE();
 
     /* LED 0 */
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -226,7 +229,7 @@ void MX_GPIO_Init(void)
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
-
+    
     /* NRF_IRQ */
     GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
     GPIO_InitStruct.Pin = GPIO_PIN_1;
@@ -254,6 +257,26 @@ void MX_GPIO_Init(void)
 
     HAL_NVIC_SetPriority(EXTI1_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 1, 0);
     HAL_NVIC_EnableIRQ(EXTI1_IRQn);
+
+    /* LCD D0-D15 */
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pin = GPIO_PIN_All;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_All, GPIO_PIN_SET);    
+
+    /* PC6-PC10*/
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pin = GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10, 
+        GPIO_PIN_SET);
+        
     return;
 }
 
@@ -342,57 +365,6 @@ void MX_TIM3_Init(void)
     HAL_TIM_Base_Start_IT(&htim3);
 }
 
-/* TIM8 init function */
-void MX_TIM8_Init(void)
-{
-    PPM_ENCODER ppm;
-    uint16_t ppm_last_low_width;
-    uint16_t i;
-
-    radio_get_pload((uint8_t*)ppm.channels);
-    ppm.valid_chan_num = 8;
-    ppm.stop_pulse_width = PPM_STOP_PULSE_WIDTH;
-    ppm_encoder(&ppm, ppm_pulse_seqence, &ppm_last_low_width);
-    p_ppm_pulse_seqence = &ppm_pulse_seqence[0];
-
-    for (i = 0; i < 16; i++)
-    {
-        printf("encode ppm chan %02d PWM %04d\r\n", i, ppm_pulse_seqence[i]);
-    }
-
-    printf("ppm_last_low_width %d\r\n", ppm_last_low_width);
-
-
-    htim8.Instance = TIM8;
-    htim8.Init.Prescaler = 72 - 1;  /* 1MHz  */
-    htim8.Init.CounterMode = TIM_COUNTERMODE_UP;
-    htim8.Init.Period = *p_ppm_pulse_seqence;
-    p_ppm_pulse_seqence++;
-    htim8.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-    htim8.Init.RepetitionCounter = 0;
-    HAL_TIM_Base_Init(&htim8);
-
-    htim8.Instance->CCR2 = 1000;
-    htim8.Instance->CR1 &= ~TIM_CR1_CEN;
-    
-    htim8.Instance->CCER = TIM_CCER_CC1E;
-    htim8.Instance->CCMR1 = TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC2PE;
-    htim8.Instance->CCR1 = PPM_STOP_PULSE_WIDTH;
-    htim8.Instance->BDTR = TIM_BDTR_MOE;
-    htim8.Instance->EGR = 1;
-    htim8.Instance->DIER = TIM_DIER_UDE;
-
-    htim8.Instance->SR &= ~TIM_SR_UIF;
-    htim8.Instance->SR &= ~TIM_SR_CC2IF;
-    htim8.Instance->DIER |= TIM_DIER_CC2IE;
-    htim8.Instance->DIER |= TIM_DIER_UIE;
-    
-    htim8.Instance->CR1 = TIM_CR1_CEN;
-
-    HAL_NVIC_SetPriority(TIM8_UP_IRQn, configLIBRARY_LOWEST_INTERRUPT_PRIORITY - 1, 0);
-    HAL_NVIC_EnableIRQ(TIM8_UP_IRQn);
-}
-
 /* USER CODE BEGIN 4 */
 
 /* USER CODE END 4 */
@@ -408,14 +380,24 @@ extern bool volatile gzll_sync_on;
 extern uint8_t gzp_system_address[4];
 extern bool pairing_ok;
 extern uint8_t gzll_chm_get_current_rx_channel(void);
+
+uint8_t menu_idx;
 void StartDefaultTask(void const * argument)
 {
+    uint16_t id = 0;
     argument = argument;
+    uint8_t test_addr[4] = {0x11, 0x22, 0x33, 0x44};
     /*## FatFS: Link the USER driver ###########################*/
     retUSER = FATFS_LinkDriver(&USER_Driver, USER_Path);
 
     /* USER CODE BEGIN 5 */
     osDelay(1);
+
+    LCD_Init();
+    LCD_Clear(BLUE);
+
+    POINT_COLOR=RED;
+    LCD_ShowString(30,40,200,24,24,"Mini STM32 ^_^");    
 
     /* enable TIM2 capture interrupt */
     HAL_NVIC_EnableIRQ(TIM2_IRQn);
@@ -424,10 +406,56 @@ void StartDefaultTask(void const * argument)
     /* Infinite loop */
     for(;;)
     {
-        osDelay(1000);
+        osDelay(100);
         HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_8);
-        //ppm_show_channels();
-#if 1
+        //pcm_channel_show();
+
+        switch(key_scan(0))
+        {
+            case KEY0_PRES:
+                menu_idx++;
+                if (menu_idx == 8)
+                {
+                    menu_idx = 0;
+                }
+
+                printf("menu idx %d.\r\n", menu_idx);
+                break;
+            case KEY1_PRES:
+                switch (menu_idx)
+                {
+                    case 0:
+                        pcm_frame_show();
+                        break;
+                    case 1:
+                        pcm_decoder_start();
+                        break;
+                    case 2:
+                        pcm_decoder_stop();
+                        break;
+                    case 3:
+                        pcm_decoder_reset();
+                        break;
+                    case 4:
+                        pcm_dbg_decode_step();
+                        break;
+                    case 5:
+                        pcm_channel_show();
+                        break;
+                    case 6:
+                        pairing_list_entry_show(3);
+                        break;
+                    case 7:
+                        pairing_list_addr_write(3, test_addr);
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            default:
+                break;
+        }
+#if 0
         printf("eint %d, tim3:%d, max:%d, tx:%d, rx:%d, tf:0x%x, rf:%d, primask:%d\r\n", 
         dbg_exit1_int_cnt, dbg_tim3_int_cnt, dbg_int_max_rt, dbg_int_tx_ds,
         dbg_int_rx_dr, dbg_irq_flag, gzll_sync_on, __get_PRIMASK());
@@ -447,9 +475,10 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 {
     if (htim->Instance == TIM2)
     {
-        htim->Instance->CCER ^= TIM_CCER_CC1P;
-        ppm_decode(htim->Instance->CCR1, 0);
+        //htim->Instance->CCER ^= TIM_CCER_CC1P;
+        pcm_decode(htim->Instance->CCR1, 0);
     }
+    
     return;
 }
 
@@ -457,7 +486,7 @@ void HAL_TIM_IC_OverFlowCallback(TIM_HandleTypeDef *htim)
 {
     if (htim->Instance == TIM2)
     {
-        ppm_decode(htim->Instance->CCR1, PPM_DECODER_OVERFLOW_ERROR);
+        //pcm_decode(htim->Instance->CCR1, PCM_FRAME_OVERFLOW_ERR);
     }
 }
 

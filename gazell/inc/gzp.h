@@ -311,7 +311,7 @@ void gzp_id_req_cancel(void);
   @retval true if new "system address" was received from a Host.
   @retval false if no "system address" was received from a Host.
 */
-bool gzp_address_req_send(void);
+bool gzp_address_req_send(uint8_t idx);
 
 /**
   Function for sending a "Host ID request" to a Host.
@@ -454,6 +454,8 @@ bool gzp_crypt_user_data_received(void);
 */
 bool gzp_crypt_user_data_read(uint8_t* dst, uint8_t* length);
 
+
+void gzp_update_system_address(uint8_t *sys_addr);
 /**
 @} @} 
 */

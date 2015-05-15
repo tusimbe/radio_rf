@@ -7,6 +7,7 @@ extern TIM_HandleTypeDef htim3;
 uint32_t dbg_tim3_int_cnt;
 uint32_t dbg_exit1_int_cnt;
 uint16_t dbg_rx_period;
+uint32_t timer_1ms;
 void gzll_set_timer_period(uint16_t period)
 {
     dbg_rx_period = period;
@@ -19,9 +20,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     if (htim->Instance == TIM3)
     {
         dbg_tim3_int_cnt++;
-        //flag = gzll_interupts_save();
+        if (dbg_tim3_int_cnt >= 1000)
+        {
+            timer_1ms++;
+        }
         gzll_timer_isr_function();
-        //gzll_interupts_restore(flag);
     }
 }
 

@@ -22,6 +22,7 @@
 
 #include "gzll.h"
 #include "gzp.h"
+#include "pairing_list.h"
 //#include "hal_aes.h"
 //#include "hal_delay.h"
 //#include "hal_flash.h"
@@ -221,7 +222,7 @@ void gzp_init()
   gzp_update_radio_params(gzp_system_address);
 }
 
-bool gzp_address_req_send()
+bool gzp_address_req_send(uint8_t idx)
 {
   uint8_t i;
   bool retval = false;
@@ -272,9 +273,7 @@ bool gzp_address_req_send()
           memcpy(gzp_system_address, &rx_payload[GZP_CMD_HOST_ADDRESS_RESP_ADDRESS], GZP_SYSTEM_ADDRESS_WIDTH);
           gzp_update_radio_params(&rx_payload[GZP_CMD_HOST_ADDRESS_RESP_ADDRESS]);
 
-          #ifndef GZP_NV_STORAGE_DISABLE
-          gzp_params_store(false); // "False" indicates that only "system address" part of DB element will be stored
-          #endif
+          pairing_list_addr_write(idx, gzp_system_address);
           retval = true;
         }
       }
@@ -295,6 +294,13 @@ bool gzp_address_req_send()
   }
 
   return retval;
+}
+
+void gzp_update_system_address(uint8_t *sys_addr)
+{
+    memcpy(gzp_system_address, sys_addr, GZP_SYSTEM_ADDRESS_WIDTH);
+    gzp_update_radio_params(sys_addr);
+    return;
 }
 
 #ifndef GZP_CRYPT_DISABLE

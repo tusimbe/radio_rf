@@ -5,12 +5,16 @@
 #include "cmsis_os.h"
 #include "hal_nrf.h"
 #include "radio.h"
-#include "ppm_decoder.h"
+#include "pcm_decoder.h"
 #include <gzll.h>
 #include <gzp.h>
 #include "telemetry.h"
+#include "pairing_list.h"
 
-extern uint16_t ppm_buffer[PPM_MAX_CHANNELS];
+extern bool waitting_for_heartbeat;
+extern bool mavlink_active;
+extern uint32_t timer_1ms;
+extern uint32_t last_heart_beat_time;
 
 /** The payload sent over the radio. Also contains the recieved data. 
  * Should be read with radio_get_pload_byte(). */
@@ -44,6 +48,15 @@ void radio_active(void)
 #ifndef GZLL_HOST_ONLY
 int32_t radio_device_init(void)
 {
+    int32_t ret;
+    ret = pairing_list_init();
+    if (ret != 0)
+    {
+        printf("[%s, L%d] call pairing_list_init failed ret 0x%x.\r\n", 
+            __FILE__, __LINE__, (unsigned int)radio_sema);
+        return -1;
+    }
+    
     osSemaphoreDef(RADIO_SEM);
     radio_sema = osSemaphoreEmptyCreate(osSemaphore(RADIO_SEM));
     if (NULL == radio_sema)
@@ -68,8 +81,12 @@ int32_t radio_device_init(void)
 bool pairing_ok = false;
 void radio_device_task(void const *argument)
 {
+    bool pairing_ret;
+    uint8_t rx_num;
+    uint8_t rx_num_last = 0xff;
+    uint8_t radio_data_rx_addr[GZP_SYSTEM_ADDRESS_WIDTH];
     argument = argument;
-    
+ 
     gzll_init();
     gzp_init();
     
@@ -95,18 +112,35 @@ void radio_device_task(void const *argument)
             }
         }
         #endif
+
+        
+        rx_num = pcm_rxnum_get();
+        if (rx_num != rx_num_last)
+        {
+            (void)pairing_list_addr_read(rx_num, radio_data_rx_addr);
+            gzp_update_system_address(radio_data_rx_addr);
+            rx_num_last = rx_num;
+        }
         
         #if 1
-        if (!pairing_ok)
+        if (!pcm_mode_get() == PCM_MODE_BINDING)
         {
             osDelay(100);
-            pairing_ok = gzp_address_req_send();            
+            pairing_ret = gzp_address_req_send(rx_num);
+            if (pairing_ret)
+            {
+                printf("pairing success!\r\n");
+            }
+            else
+            {
+                printf("pairing failed, retrying ...\r\n");
+            }
         }
         else
         {
             if (gzll_get_state() == GZLL_IDLE)
             {
-                memcpy(pload, ppm_buffer, RF_PAYLOAD_LENGTH);
+                pcm_ppm_channel_get(pload, RF_PAYLOAD_LENGTH);
                 if (gzll_tx_data(pload, GZLL_MAX_FW_PAYLOAD_LENGTH, 2))
                 {
                     
@@ -178,6 +212,12 @@ void radio_host_task(void const * argument)
             gzll_ack_payload_write(ack_pload, 5, 0);
         }
         #endif
+
+        if (timer_1ms - last_heart_beat_time > 2000U)
+        {
+            mavlink_active = false;
+            waitting_for_heartbeat = true;
+        }
         
         gzp_host_execute();
         

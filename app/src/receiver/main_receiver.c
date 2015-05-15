@@ -374,6 +374,7 @@ extern uint32_t dbg_int_rx_dr;
 extern uint32_t dbg_int_tx_ds;
 extern uint8_t  dbg_irq_flag;
 extern uint16_t dbg_rx_period;
+extern uint32_t heartbeat_cnt;
 extern uint8_t gzll_chm_get_current_rx_channel(void);
 
 void StartDefaultTask(void const * argument)
@@ -398,6 +399,7 @@ void StartDefaultTask(void const * argument)
 
         printf("rx poried:%d, int_status:%d\r\n", dbg_rx_period, __HAL_GPIO_EXTI_READ(GPIO_PIN_1));
         */
+        printf("hb:%d\r\n", heartbeat_cnt);
     }
 
     /* USER CODE END 5 */ 
