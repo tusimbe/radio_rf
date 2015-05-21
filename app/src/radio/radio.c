@@ -10,11 +10,13 @@
 #include <gzp.h>
 #include "telemetry.h"
 #include "pairing_list.h"
+#include "led.h"
 
 extern bool waitting_for_heartbeat;
 extern bool mavlink_active;
 extern uint32_t timer_1ms;
 extern uint32_t last_heart_beat_time;
+extern uint8_t gzp_system_address[];
 
 /** The payload sent over the radio. Also contains the recieved data. 
  * Should be read with radio_get_pload_byte(). */
@@ -52,8 +54,8 @@ int32_t radio_device_init(void)
     ret = pairing_list_init();
     if (ret != 0)
     {
-        printf("[%s, L%d] call pairing_list_init failed ret 0x%x.\r\n", 
-            __FILE__, __LINE__, (unsigned int)radio_sema);
+        printf("[%s, L%d] call pairing_list_init failed ret %d.\r\n", 
+            __FILE__, __LINE__, ret);
         return -1;
     }
     
@@ -123,13 +125,15 @@ void radio_device_task(void const *argument)
         }
         
         #if 1
-        if (!pcm_mode_get() == PCM_MODE_BINDING)
+        if (pcm_mode_get() == PCM_MODE_BINDING)
         {
             osDelay(100);
             pairing_ret = gzp_address_req_send(rx_num);
             if (pairing_ret)
             {
-                printf("pairing success!\r\n");
+                printf("pairing success(%02x%02x%02x%02x)!\r\n", 
+                    gzp_system_address[0], gzp_system_address[1], 
+                    gzp_system_address[2], gzp_system_address[3]);
             }
             else
             {
@@ -180,12 +184,23 @@ int32_t radio_host_init(void)
     return 0;
 }
 
+static bool g_host_pairing_status = false;
+
+bool radio_pairing_status_get(void)
+{
+    return g_host_pairing_status;
+}
+
+void radio_pairing_status_set(bool status)
+{
+    g_host_pairing_status = status;
+    return;
+}
 
 void radio_host_task(void const * argument)
 {
     uint8_t *ptr;
     uint8_t len;
-    uint32_t tmp = 0x12345678;
     argument = argument;
 
     gzll_init();
@@ -218,14 +233,22 @@ void radio_host_task(void const * argument)
             mavlink_active = false;
             waitting_for_heartbeat = true;
         }
-        
-        gzp_host_execute();
+
+        if (radio_pairing_status_get())
+        {
+            gzp_host_execute();
+            if (gzp_address_exchanged())
+            {
+                led_blink(LED_1, 3, 1000);
+                radio_pairing_status_set(false);
+            }
+        }
         
         if (gzll_get_rx_data_ready_pipe_number() == 2)
         {
             if (gzll_rx_fifo_read(pload, NULL, NULL))
             {
-                //printf("pload:%d\r\n", *(uint16_t*)pload);
+                printf("pload:%d\r\n", *(uint16_t*)pload);
                 memset(ack_pload, 0, RF_PAYLOAD_LENGTH);
                
                 ptr = ack_pload;

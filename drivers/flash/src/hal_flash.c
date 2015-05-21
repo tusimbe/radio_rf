@@ -25,16 +25,6 @@ void hal_flash_page_erase(uint8_t pn)
 
 }
 
-void gzp_host_chip_id_read(uint8_t *dst, uint8_t n)
-{
-    dst[0] = 0x33;
-    dst[1] = 0x44;
-    dst[2] = 0x55;
-    dst[3] = 0x01;
-
-    return;
-}
-
 void delay_us(uint16_t us)
 {
     uint32_t i;

@@ -386,7 +386,7 @@ void StartDefaultTask(void const * argument)
 {
     uint16_t id = 0;
     argument = argument;
-    uint8_t test_addr[4] = {0x11, 0x22, 0x33, 0x44};
+    uint8_t test_addr[4] = {0x33, 0x44, 0x55, 0x66};
     /*## FatFS: Link the USER driver ###########################*/
     retUSER = FATFS_LinkDriver(&USER_Driver, USER_Path);
 
@@ -414,7 +414,7 @@ void StartDefaultTask(void const * argument)
         {
             case KEY0_PRES:
                 menu_idx++;
-                if (menu_idx == 8)
+                if (menu_idx == 10)
                 {
                     menu_idx = 0;
                 }
@@ -447,6 +447,14 @@ void StartDefaultTask(void const * argument)
                         break;
                     case 7:
                         pairing_list_addr_write(3, test_addr);
+                        break;
+                    case 8:
+                        i2c_dbg_sda_in();
+                        printf("CRL:0x%08x, CRH:0x%08x\r\n", GPIOC->CRL, GPIOC->CRH);
+                        break;
+                    case 9:
+                        i2c_dbg_sda_out();
+                        printf("CRL:0x%08x, CRH:0x%08x\r\n", GPIOC->CRL, GPIOC->CRH);
                         break;
                     default:
                         break;

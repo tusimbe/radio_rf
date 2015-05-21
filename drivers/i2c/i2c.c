@@ -341,7 +341,7 @@ void i2c_pin_dir_set(GPIO_TypeDef *GPIOx, uint16_t pin, uint8_t dir)
             configregister = (iocurrent < GPIO_PIN_8) ? &GPIOx->CRL     : &GPIOx->CRH;
             registeroffset = (iocurrent < GPIO_PIN_8) ? (position << 2) : ((position - 8) << 2);
 
-            *configregister &= 0xf << registeroffset; 
+            *configregister &= ~(0xf << registeroffset);
             
             if (dir == I2C_PIN_DIR_IN)
             {
@@ -355,5 +355,18 @@ void i2c_pin_dir_set(GPIO_TypeDef *GPIOx, uint16_t pin, uint8_t dir)
     }
 
     return;
+}
+
+extern I2C_INSTANCE_STRU eeprom_i2c;
+void i2c_dbg_sda_out(void)
+{
+    I2C_INSTANCE_STRU *p = &eeprom_i2c;
+    SDA_OUT(p);
+}
+
+void i2c_dbg_sda_in(void)
+{
+    I2C_INSTANCE_STRU *p = &eeprom_i2c;
+    SDA_IN(p);
 }
 

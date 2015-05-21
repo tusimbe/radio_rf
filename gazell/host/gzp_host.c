@@ -21,6 +21,8 @@
 #include "string.h"
 #include "stdint.h"
 #include "stdbool.h"
+#include "host_addr.h"
+#include <stdio.h>
 //#include "hal_aes.h"
 //#include "hal_flash.h"
 //#include "memdefs.h"
@@ -99,6 +101,7 @@ static uint8_t gzp_session_counter[GZP_SESSION_TOKEN_LENGTH];
 static uint8_t gzp_encrypted_user_data_length;
 static bool gzp_encrypted_user_data[GZP_ENCRYPTED_USER_DATA_MAX_LENGTH];
 extern uint8_t gzp_dyn_key[GZP_DYN_KEY_LENGTH];
+uint8_t gzp_host_system_address[GZP_SYSTEM_ADDRESS_WIDTH];
 
 //-----------------------------------------------------------------------------
 // Implementation: Application programming interface (API)
@@ -106,14 +109,16 @@ extern uint8_t gzp_dyn_key[GZP_DYN_KEY_LENGTH];
 
 void gzp_init()
 {
-  uint8_t system_address[GZP_SYSTEM_ADDRESS_WIDTH];
-
   // Read "chip id", of which 4 bytes (GZP_SYSTEM_ADDRESS_WIDTH)
   // are used as system address
-  gzp_host_chip_id_read(system_address, GZP_SYSTEM_ADDRESS_WIDTH);
+  gzp_host_chip_id_read(gzp_host_system_address, GZP_SYSTEM_ADDRESS_WIDTH);
 
+  printf("host chip id:%02x%02x%02x%02x. \r\n", gzp_host_system_address[0], 
+    gzp_host_system_address[1], gzp_host_system_address[2], 
+    gzp_host_system_address[3]);
+  
   // Set up radio parameters (addresses and channel subset) from system_address
-  gzp_update_radio_params(system_address);
+  gzp_update_radio_params(gzp_host_system_address);
 
   // Only "data pipe" enabled by default
   gzll_set_param(GZLL_PARAM_RX_PIPES, gzll_get_param(GZLL_PARAM_RX_PIPES) | (1 << GZP_DATA_PIPE));
@@ -295,6 +300,12 @@ bool gzp_address_exchanged()
 {
   return gzp_address_exchanged_f;
 }
+
+void gzp_host_chip_id_read(uint8_t *dst, uint8_t n)
+{
+    (void)host_chip_id_read(dst, n);
+}
+
 
 #ifndef GZP_CRYPT_DISABLE
 

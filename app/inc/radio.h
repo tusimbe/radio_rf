@@ -13,4 +13,7 @@ void radio_active(void);
 void radio_device_task(void const *argument);
 void radio_host_task(void const *argument);
 
+void radio_pairing_status_set(bool status);
+
+
 #endif

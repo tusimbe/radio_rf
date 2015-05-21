@@ -42,6 +42,9 @@
 #include "ppm_encoder.h"
 #include "radio.h"
 #include "telemetry.h"
+#include "key.h"
+#include "host_addr.h"
+#include "led.h"
 #include <stdio.h>
 #include <string.h>
 /* USER CODE BEGIN Includes */
@@ -130,8 +133,12 @@ int main(void)
     /* USER CODE END RTOS_TIMERS */
 
     __enable_irq();
+    (void)led_init();
+    host_addr_init();
 
+    key_init();
     (void)telemetry_init();
+    printf("telemetry_init ok .\r\n");
     
     (void)radio_host_init();
 
@@ -385,6 +392,12 @@ void StartDefaultTask(void const * argument)
 
     /* USER CODE BEGIN 5 */
     osDelay(1);
+    
+    if (KEY0_PRES == key_scan(0))
+    {
+        printf("key 0 pressed, enter pairing status ...\r\n");
+        radio_pairing_status_set(true);
+    }
 
     /* Infinite loop */
     for(;;)
